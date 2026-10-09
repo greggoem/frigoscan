@@ -92,9 +92,9 @@ function render(newIds = []) {
         <div class="lead"><input type="checkbox" class="pick" data-pick="${it.id}" ${isPicked(it) ? 'checked' : ''} aria-label="Utiliser ${esc(it.name)} pour les recettes"><span class="chip ${st.cls}">${st.txt}</span></div>
         <div style="min-width:0"><div class="item-name">${esc(it.name)}${it.example ? '<span class="tag-ex">exemple</span>' : ''}</div>
           <div class="item-meta"><span>${it.type === 'DDM' ? 'De préférence avant' : it.type === 'estimé' ? 'Estimé au' : 'Jusqu’au'} ${fmt(it.date)}</span>
-          <span>Rappel ${fmt(iso(reminderOf(it.date)))}</span><span class="src">${esc(SRC[it.source] || it.source)}${it.lot ? ' · lot ' + esc(it.lot) : ''}</span></div></div>
-        <div class="item-side"><a href="${gcalLink(it)}" target="_blank" rel="noopener">+ Agenda</a>
-          <button class="ghost" data-del="${it.id}" aria-label="Retirer ${esc(it.name)}">Retirer</button></div></li>`;
+          <span>Rappel ${fmt(iso(reminderOf(it.date)))}</span><span class="src">${esc(SRC[it.source] || it.source)}${it.lot ? ' · lot ' + esc(it.lot) : ''}</span></div>
+          <div class="item-side"><a href="${gcalLink(it)}" target="_blank" rel="noopener">+ Agenda</a>
+          <button data-del="${it.id}" aria-label="Retirer ${esc(it.name)}">Retirer</button></div></div></li>`;
     }).join('');
   const c = {bad:0, warn:0, ok:0};
   items.forEach(it => { const n = daysLeft(it.date); if (n <= 1) c.bad++; else if (n <= 3) c.warn++; else c.ok++; });

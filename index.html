@@ -68,7 +68,7 @@ label{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
 
 /* Frigo */
 .fridge{list-style:none;margin:0;padding:0}
-.fridge li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.fridge li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
 .fridge li:first-child{border-top:0}
 .lead{display:flex;align-items:center;gap:10px}
 .pick{width:20px;height:20px;margin:0;padding:0;accent-color:var(--accent)}
@@ -77,9 +77,10 @@ label{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
 .item-name{font-weight:600;overflow-wrap:anywhere}
 .item-meta{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:0 10px}
 .item-meta .src{font-family:var(--f-mono);font-size:11px}
-.item-side{display:flex;flex-direction:column;align-items:flex-end}
-.item-side a{font-size:12.5px;color:var(--accent);padding:6px 4px;text-decoration:none;white-space:nowrap}
-.tag-ex{font-size:10px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--muted);margin-left:6px;vertical-align:2px}
+.item-side{display:flex;gap:4px;margin-top:2px;margin-left:-8px}
+.item-side a,.item-side button{font:inherit;font-size:12.5px;font-weight:600;color:var(--accent);padding:6px 8px;text-decoration:none;white-space:nowrap;min-height:32px;background:none;border:0;border-radius:8px;display:inline-flex;align-items:center}
+.item-side button{color:var(--muted)}
+.tag-ex{white-space:nowrap;font-size:10px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--muted);margin-left:6px;vertical-align:2px}
 .empty{padding:22px 4px;text-align:center;color:var(--muted)}
 .fridge li.new{animation:flash 1.6s ease-out}
 @keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
@@ -137,8 +138,8 @@ nav.tabs button{all:unset;display:grid;justify-items:center;align-content:center
 nav.tabs button svg{width:24px;height:24px}
 nav.tabs button[aria-current="page"]{color:var(--accent)}
 nav.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;border-radius:10px}
-.badge{position:absolute;margin:-30px 0 0 22px;min-width:17px;height:17px;border-radius:9px;background:var(--bad);color:#fff;font-size:10.5px;display:grid;place-items:center;padding:0 4px}
-.nav-btn{position:relative}
+.badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:17px;height:17px;border-radius:9px;background:var(--bad);color:#fff;font-size:10.5px;display:grid;place-items:center;padding:0 4px}
+nav.tabs button.nav-btn{position:relative}
 
 .banner{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:13.5px;display:grid;gap:6px}
 .toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 14px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;max-width:90vw}
