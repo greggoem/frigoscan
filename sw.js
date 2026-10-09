@@ -1,5 +1,5 @@
 // FrigoScan — cache hors ligne de l'application
-const VERSION = 'frigoscan-v2';
+const VERSION = 'frigoscan-v3';
 const SHELL = [
   './', './index.html', './app.js', './gs1.js', './manifest.webmanifest',
   './vendor/zxing.min.js', './vendor/qrcode.js', './vendor/jsbarcode.min.js',
