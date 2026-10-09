@@ -1,8 +1,8 @@
 // FrigoScan — cache hors ligne de l'application
-const VERSION = 'frigoscan-v4';
+const VERSION = 'frigoscan-v5';
 const SHELL = [
   './', './index.html', './app.js', './gs1.js', './manifest.webmanifest',
-  './vendor/zxing.min.js', './vendor/qrcode.js', './vendor/jsbarcode.min.js',
+  './vendor/barcode-detector.js', './vendor/zxing_reader.wasm', './vendor/zxing.min.js', './vendor/qrcode.js', './vendor/jsbarcode.min.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'
 ];
 

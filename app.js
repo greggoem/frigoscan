@@ -155,12 +155,19 @@ function go(v) {
 }
 document.querySelectorAll('nav.tabs button').forEach(b => b.addEventListener('click', () => go(b.dataset.view)));
 
-/* ---------- Caméra : scan en continu ---------- */
-let stream = null, scanning = false, lastTry = 0;
-const video = $('#video');
-const hasDetector = 'BarcodeDetector' in window;
-let detector = null;
-if (hasDetector) { try { detector = new BarcodeDetector({formats:['qr_code','data_matrix','ean_13','ean_8','upc_a','code_128']}); } catch (e) { detector = null; } }
+/* ---------- Lecture des codes : moteur zxing-cpp (WebAssembly), repli ZXing JS ---------- */
+const FORMATS = ['qr_code','data_matrix','ean_13','ean_8','upc_a','upc_e','code_128'];
+let wasmDetector = null, engine = 'zxing-js';
+try {
+  if (window.BarcodeDetectionAPI) {
+    BarcodeDetectionAPI.prepareZXingModule({
+      overrides: { locateFile: (p, prefix) => p.endsWith('.wasm') ? new URL('vendor/zxing_reader.wasm', location.href).href : prefix + p },
+      fireImmediately: true
+    });
+    wasmDetector = new BarcodeDetectionAPI.BarcodeDetector({formats: FORMATS});
+    engine = 'zxing-cpp';
+  }
+} catch (e) { wasmDetector = null; }
 const zxReader = (() => {
   if (!window.ZXing) return null;
   const F = ZXing.BarcodeFormat, hints = new Map();
@@ -168,24 +175,47 @@ const zxReader = (() => {
   hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
   const r = new ZXing.MultiFormatReader(); r.setHints(hints); return r;
 })();
-const canvas = document.createElement('canvas');
 function zxDecodeCanvas(c) {
   if (!zxReader) return null;
   try { return zxReader.decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(new ZXing.HTMLCanvasElementLuminanceSource(c)))).getText(); }
   catch (e) { return null; } finally { try { zxReader.reset(); } catch (e) {} }
 }
+async function wasmDecode(src) {
+  if (!wasmDetector) return null;
+  try { const r = await wasmDetector.detect(src); return r[0] ? r[0].rawValue : null; }
+  catch (e) { return null; }
+}
+// Dessine une image (entière ou zone centrale) dans un canvas à la taille voulue
+function toCanvas(src, w, h, max, crop) {
+  const cw = Math.round(w * crop[0]), ch = Math.round(h * crop[1]);
+  const s = Math.min(1, max / Math.max(cw, ch));
+  const c = document.createElement('canvas'); c.width = Math.round(cw * s); c.height = Math.round(ch * s);
+  c.getContext('2d', {willReadFrequently:true}).drawImage(src, (w - cw) / 2, (h - ch) / 2, cw, ch, 0, 0, c.width, c.height);
+  return c;
+}
 
+/* ---------- Caméra : scan en continu ---------- */
+let stream = null, scanning = false, lastTry = 0, frameN = 0, camStart = 0;
+const video = $('#video');
 async function startCam() {
   $('#out').innerHTML = '';
+  if (!navigator.mediaDevices?.getUserMedia) { $('#cam-msg').textContent = 'Caméra indisponible ici. Ouvrez l’app installée ou Safari/Chrome.'; return; }
   try {
-    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1280}, height:{ideal:720}}, audio:false});
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}}, audio:false});
   } catch (e) {
-    $('#cam-msg').textContent = 'Caméra refusée. Autorisez-la dans les réglages du téléphone, ou choisissez une photo.';
+    $('#cam-msg').textContent = e.name === 'NotAllowedError'
+      ? 'Caméra refusée. Autorisez-la dans les réglages du téléphone (Safari ou Chrome > Caméra), puis réessayez.'
+      : 'Impossible d’ouvrir la caméra (' + e.name + '). Utilisez « Choisir une photo ».';
     return;
   }
+  const track = stream.getVideoTracks()[0];
+  try { // mise au point continue quand le téléphone le permet
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    if (caps.focusMode && caps.focusMode.includes('continuous')) await track.applyConstraints({advanced:[{focusMode:'continuous'}]});
+  } catch (e) {}
   video.srcObject = stream; await video.play().catch(() => {});
   $('#cam-start').hidden = true; $('#frame').hidden = false; $('#cam-msg').textContent = 'Visez le code dans le cadre';
-  scanning = true; requestAnimationFrame(tick);
+  scanning = true; frameN = 0; camStart = performance.now(); requestAnimationFrame(tick);
 }
 function stopCam() {
   scanning = false;
@@ -194,34 +224,28 @@ function stopCam() {
 }
 async function tick(t) {
   if (!scanning) return;
-  if (t - lastTry > 280 && video.readyState >= 2) {
-    lastTry = t;
+  if (t - lastTry > 200 && video.readyState >= 2 && video.videoWidth) {
+    lastTry = t; frameN++;
+    const vw = video.videoWidth, vh = video.videoHeight;
     let text = null;
-    if (detector) { try { const r = await detector.detect(video); if (r[0]) text = r[0].rawValue; } catch (e) {} }
-    else {
-      // zone centrale de l'image, réduite pour aller vite
-      const vw = video.videoWidth, vh = video.videoHeight;
-      const cw = Math.round(vw * 0.8), ch = Math.round(vh * 0.6);
-      const s = Math.min(1, 900 / cw);
-      canvas.width = Math.round(cw * s); canvas.height = Math.round(ch * s);
-      canvas.getContext('2d', {willReadFrequently:true}).drawImage(video, (vw - cw) / 2, (vh - ch) / 2, cw, ch, 0, 0, canvas.width, canvas.height);
-      text = zxDecodeCanvas(canvas);
-    }
+    // zone centrale (là où est le cadre), en alternant avec l'image entière
+    const crop = frameN % 2 ? [0.85, 0.6] : [1, 1];
+    const c = toCanvas(video, vw, vh, 1280, crop);
+    text = await wasmDecode(c);
+    if (!text && (!wasmDetector || frameN % 3 === 0)) text = zxDecodeCanvas(toCanvas(video, vw, vh, 900, [0.85, 0.6]));
     if (text && scanning) {
       try { navigator.vibrate && navigator.vibrate(60); } catch (e) {}
       const shot = await grabFrame();
       stopCam(); handleCode(text, shot); return;
     }
+    if (performance.now() - camStart > 8000) $('#cam-msg').textContent = 'Rapprochez le code (10-15 cm), bien éclairé et à plat';
   }
   requestAnimationFrame(tick);
 }
 function grabFrame() {
   return new Promise(res => {
-    try {
-      const c = document.createElement('canvas'); const s = Math.min(1, 1400 / Math.max(video.videoWidth, video.videoHeight));
-      c.width = Math.round(video.videoWidth * s); c.height = Math.round(video.videoHeight * s);
-      c.getContext('2d').drawImage(video, 0, 0, c.width, c.height); c.toBlob(b => res(b), 'image/jpeg', 0.85);
-    } catch (e) { res(null); }
+    try { toCanvas(video, video.videoWidth, video.videoHeight, 1400, [1, 1]).toBlob(b => res(b), 'image/jpeg', 0.85); }
+    catch (e) { res(null); }
   });
 }
 $('#btn-cam').addEventListener('click', startCam);
@@ -232,19 +256,21 @@ $('#file').addEventListener('change', async e => {
   const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   stopCam();
   $('#out').innerHTML = '<p class="note"><span class="spinner"></span> Lecture du code…</p>';
-  let text = null;
-  try {
-    const bmp = await createImageBitmap(f);
-    if (detector) { try { const r = await detector.detect(bmp); if (r[0]) text = r[0].rawValue; } catch (err) {} }
-    for (const max of [1400, 900, 2000]) {
-      if (text) break;
-      const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
-      const c = document.createElement('canvas'); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
-      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); text = zxDecodeCanvas(c);
-    }
-  } catch (err) {}
+  const text = await decodeFile(f);
   if (text) handleCode(text, f); else showNoCode(f);
 });
+async function decodeFile(f) {
+  try {
+    const bmp = await createImageBitmap(f);
+    for (const [max, crop] of [[2000, [1, 1]], [1200, [1, 1]], [1400, [0.6, 0.6]]]) {
+      const c = toCanvas(bmp, bmp.width, bmp.height, max, crop);
+      const t = (await wasmDecode(c)) || zxDecodeCanvas(c);
+      if (t) return t;
+    }
+  } catch (err) {}
+  return null;
+}
+window.__frigoscanDecodeFile = decodeFile; // utilisé pour les tests
 $('#paste-form').addEventListener('submit', e => { e.preventDefault(); const v = $('#paste').value.trim(); if (v) { stopCam(); handleCode(v.replace(/<GS>|\\x1d|\|/gi, GS1.GS), null); } });
 $('#btn-manual').addEventListener('click', () => { stopCam(); showForm({r:{ok:true, fields:[], dates:{}}, prod:null, photo:null, manual:true}); });
 
@@ -457,6 +483,7 @@ function keyState() { $('#key-state').textContent = settings.apiKey ? 'Clé enre
 $('#btn-key').addEventListener('click', () => { const v = $('#apikey').value.trim(); if (!v) return; settings.apiKey = v; saveSettings(); $('#apikey').value = ''; keyState(); updateRecipeBtn(); toast('Clé enregistrée'); });
 $('#btn-key-del').addEventListener('click', () => { settings.apiKey = ''; saveSettings(); keyState(); updateRecipeBtn(); });
 keyState();
+$("#engine").textContent = engine;
 
 /* ---------- Installation ---------- */
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
