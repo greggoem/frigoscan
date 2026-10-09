@@ -265,7 +265,7 @@ function showForm({r, prod, photo, manual}) {
   }).join('');
   let verdict = '';
   if (manual) verdict = '';
-  else if (r.expiry) verdict = `<div class="verdict"><b>Date trouvée dans le code.</b> ${r.expiryType === 'DLC' ? 'À consommer jusqu’au' : r.expiryType === 'DDM' ? 'De préférence avant le' : 'Vente jusqu’au'} ${fmt(r.expiry)}. Rien à saisir.</div>`;
+  else if (r.expiry) verdict = `<div class="verdict"><b>Date trouvée dans le code.</b> ${r.expiryType === 'DLC' ? 'À consommer jusqu’au' : r.expiryType === 'DDM' ? 'De préférence avant le' : 'Vente jusqu’au'} ${fmt(r.expiry)}, rien à saisir.</div>`;
   else if (/magasin/.test(r.format)) verdict = `<div class="verdict">Étiquette magasin à poids variable : article et prix, pas de date. Indiquez la date imprimée.</div>`;
   else verdict = `<div class="verdict">Code-barres classique : il identifie le produit, pas la date. ${settings.apiKey && photo ? 'L’IA peut lire la date sur la photo.' : 'Indiquez la date imprimée sur l’emballage.'}</div>`;
   const cat = prod ? prod.cat : 'autre';
