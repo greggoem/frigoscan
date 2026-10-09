@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FrigoScan</title>
+<meta name="description" content="Scannez vos produits frais et recevez un rappel avant la date limite.">
+<meta name="theme-color" content="#2350C4">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FrigoScan">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Mise en page : une colonne mobile, barre d'onglets en bas (Frigo / Scanner / Démo / Réglages). */
+:root{
+  --bg:#EDF1F0; --surface:#FFFFFF; --sunk:#E2E8E6; --ink:#13211E; --muted:#56655F; --line:#D0D9D6;
+  --accent:#2350C4; --accent-ink:#FFFFFF; --accent-soft:#E3EAFB;
+  --bad:#B8321C; --bad-soft:#FBE6E1; --warn:#9A6410; --warn-soft:#FBF0D9; --ok:#2B7247; --ok-soft:#E1F1E6;
+  --paper:#FFFEF8; --paper-ink:#1E1E1A;
+  --f-display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --f-body:"Public Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --nav-h:62px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0E1513; --surface:#161F1D; --sunk:#1C2725; --ink:#E4ECE9; --muted:#97A8A2; --line:#2A3633;
+  --accent:#86A6FF; --accent-ink:#0B1530; --accent-soft:#1E2A47;
+  --bad:#FF8A73; --bad-soft:#3A1E18; --warn:#F2C064; --warn-soft:#382B12; --ok:#7FD39E; --ok-soft:#173023;
+  --paper:#1F2422; --paper-ink:#E8E6DA; color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+main{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 24px)}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1{font-size:28px;line-height:1.1}
+h2{font-size:19px}
+h3{font-size:16px}
+p{margin:0}
+.eyebrow{font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+.note{font-size:13px;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-size:12px}
+.stack{display:grid;gap:14px}
+button,.btn{font:inherit;font-weight:600;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:11px 15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;line-height:1.2;min-height:44px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.ghost{background:transparent;border-color:transparent;color:var(--muted);padding:8px 10px;min-height:40px}
+button:disabled{opacity:.5}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+label{display:grid;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.view{display:grid;gap:16px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+
+/* Compteurs */
+.tally{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tally div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.tally b{display:block;font-family:var(--f-display);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.tally span{font-size:12px;color:var(--muted);line-height:1.3;display:block}
+.t-bad b{color:var(--bad)} .t-warn b{color:var(--warn)} .t-ok b{color:var(--ok)}
+
+/* Frigo */
+.fridge{list-style:none;margin:0;padding:0}
+.fridge li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.fridge li:first-child{border-top:0}
+.lead{display:flex;align-items:center;gap:10px}
+.pick{width:20px;height:20px;margin:0;padding:0;accent-color:var(--accent)}
+.chip{font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:72px;text-align:center}
+.c-bad{background:var(--bad-soft);color:var(--bad)} .c-warn{background:var(--warn-soft);color:var(--warn)} .c-ok{background:var(--ok-soft);color:var(--ok)} .c-low{background:var(--sunk);color:var(--muted)}
+.item-name{font-weight:600;overflow-wrap:anywhere}
+.item-meta{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:0 10px}
+.item-meta .src{font-family:var(--f-mono);font-size:11px}
+.item-side{display:flex;flex-direction:column;align-items:flex-end}
+.item-side a{font-size:12.5px;color:var(--accent);padding:6px 4px;text-decoration:none;white-space:nowrap}
+.tag-ex{font-size:10px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--muted);margin-left:6px;vertical-align:2px}
+.empty{padding:22px 4px;text-align:center;color:var(--muted)}
+.fridge li.new{animation:flash 1.6s ease-out}
+@keyframes flash{from{background:var(--accent-soft)}to{background:transparent}}
+
+/* Recettes */
+.recipes{display:grid;gap:10px}
+.recipe{border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:14px}
+.recipe.open{border-color:var(--accent)}
+.recipe-btn{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;width:100%;padding:12px;cursor:pointer}
+.recipe-btn b{font-family:var(--f-display);font-size:15px}
+.recipe-btn .go{grid-row:span 2;align-self:center;font-size:12.5px;font-weight:600;color:var(--accent)}
+.recipe-full{padding:4px 14px 14px;border-top:1px solid var(--line)}
+.recipe-full h4{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
+.recipe-full ul,.recipe-full ol{margin:0;padding-left:20px;display:grid;gap:4px}
+.recipe-full li.fr{font-weight:600}
+
+/* Scanner */
+.cam{position:relative;border-radius:18px;overflow:hidden;background:#0b0f0e;aspect-ratio:3/4;max-height:58vh;width:100%;max-width:100%}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.cam .frame{position:absolute;inset:22% 12%;border:3px solid rgba(255,255,255,.9);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.cam .msg{position:absolute;left:0;right:0;bottom:12px;text-align:center;color:#fff;font-size:14px;font-weight:500;text-shadow:0 1px 3px #000}
+.cam .start{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:10px;color:#fff;text-align:center;padding:20px}
+.decode{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+.decode-head{padding:10px 14px;background:var(--sunk);display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px}
+.decode table{width:100%;border-collapse:collapse;font-size:13px}
+.decode td{padding:6px 14px;border-top:1px solid var(--line);vertical-align:top}
+.decode td:first-child{font-family:var(--f-mono);color:var(--muted);width:56px}
+.decode tr.hit td{background:var(--ok-soft)}
+.verdict{padding:12px 14px;border-top:1px solid var(--line);font-size:13.5px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px;border-top:1px solid var(--line)}
+.form .full{grid-column:1/-1}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Démo */
+.receipt{background:var(--paper);color:var(--paper-ink);font-family:var(--f-mono);font-size:11.5px;border-radius:4px;padding:14px;border:1px solid var(--line)}
+.receipt .r-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:6px 0;border-top:1px dashed color-mix(in srgb,var(--paper-ink) 25%,transparent)}
+.receipt .r-raw{grid-column:1/-1;opacity:.6;font-size:10px;overflow-wrap:anywhere}
+.receipt .r-head{text-align:center;padding-bottom:8px}
+.labels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.label{background:#fff;color:#111;border-radius:8px;padding:10px;display:grid;gap:6px;justify-items:center;text-align:center;border:1px solid var(--line)}
+.label .code{min-height:120px;display:grid;place-items:center;width:100%}
+.label .code svg{max-width:100%;height:auto;max-height:130px}
+.label b{font-family:var(--f-display);font-size:14px}
+.label span{font-size:11.5px;color:#555}
+.label button{background:#fff;color:#1a1a1a;border-color:#ccc;font-size:12.5px;padding:6px 10px;min-height:36px}
+.level{display:grid;gap:4px;padding:12px 0;border-top:1px solid var(--line)}
+.level:first-of-type{border-top:0}
+.level .n{font-family:var(--f-mono);font-size:11.5px;color:var(--accent)}
+
+/* Navigation */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);height:var(--nav-h)}
+nav.tabs button{all:unset;display:grid;justify-items:center;align-content:center;gap:2px;font-size:11.5px;font-weight:600;color:var(--muted);cursor:pointer}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button[aria-current="page"]{color:var(--accent)}
+nav.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;border-radius:10px}
+.badge{position:absolute;margin:-30px 0 0 22px;min-width:17px;height:17px;border-radius:9px;background:var(--bad);color:#fff;font-size:10.5px;display:grid;place-items:center;padding:0 4px}
+.nav-btn{position:relative}
+
+.banner{background:var(--accent-soft);border-radius:14px;padding:12px 14px;font-size:13.5px;display:grid;gap:6px}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 14px);transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;max-width:90vw}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}.fridge li.new{animation:none}}
+</style>
+</head>
+<body>
+<main>
+  <!-- ===== FRIGO ===== -->
+  <section class="view" id="v-frigo" aria-labelledby="h-frigo">
+    <div class="top"><div><div class="eyebrow">FrigoScan</div><h1 id="h-frigo">Mon frigo</h1></div>
+      <button class="ghost" id="btn-ics" title="Ajouter tous les rappels au calendrier du téléphone">Rappels</button></div>
+    <div id="install-banner" class="banner" hidden></div>
+    <div class="tally" id="tally"></div>
+    <div class="panel">
+      <ul class="fridge" id="fridge"></ul>
+    </div>
+    <div class="panel stack" id="recipes-panel">
+      <div class="row" style="justify-content:space-between"><h2>Recettes</h2><button id="btn-recipes" class="primary">Recettes</button></div>
+      <p class="note" id="recipes-hint">Cochez les produits à utiliser. Ceux qui expirent dans les 3 jours sont cochés d'office.</p>
+      <div id="recipes" class="recipes"></div>
+    </div>
+  </section>
+
+  <!-- ===== SCANNER ===== -->
+  <section class="view" id="v-scan" hidden aria-labelledby="h-scan">
+    <div><div class="eyebrow">Ajouter un produit</div><h1 id="h-scan">Scanner</h1></div>
+    <div class="cam" id="cam">
+      <video id="video" playsinline muted autoplay></video>
+      <div class="frame" id="frame" hidden></div>
+      <div class="msg" id="cam-msg"></div>
+      <div class="start" id="cam-start"><p>Visez le code-barres, le QR ou le DataMatrix du produit.</p><button class="primary" id="btn-cam">Ouvrir la caméra</button></div>
+    </div>
+    <div class="row">
+      <button id="btn-photo">Choisir une photo</button>
+      <input type="file" id="file" accept="image/*" class="sr" aria-label="Photo du code">
+      <button id="btn-manual">Saisie manuelle</button>
+    </div>
+    <form class="row" id="paste-form" style="flex-wrap:nowrap">
+      <input id="paste" placeholder="Coller le contenu d'un code" autocomplete="off" aria-label="Contenu d'un code">
+      <button type="submit">Lire</button>
+    </form>
+    <div id="out" aria-live="polite"></div>
+  </section>
+
+  <!-- ===== DÉMO ===== -->
+  <section class="view" id="v-demo" hidden aria-labelledby="h-demo">
+    <div><div class="eyebrow">Pour présenter l'idée</div><h1 id="h-demo">Démo</h1></div>
+    <div class="panel stack">
+      <h2>Passage en caisse simulé</h2>
+      <p class="note">Niveau 3 : la caisse lit les QR GS1 et l'app de l'enseigne remplit le frigo. Le client ne scanne rien.</p>
+      <button class="primary" id="btn-checkout">Simuler un passage en caisse</button>
+      <div id="receipt"></div>
+    </div>
+    <div class="panel stack">
+      <h2>Étiquettes de test</h2>
+      <p class="note">Affichez-les sur un autre écran et scannez-les avec l'onglet Scanner. Les dates partent d'aujourd'hui.</p>
+      <div class="labels" id="labels"></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-bottom:6px">Trois niveaux</h2>
+      <div class="level"><span class="n">Niveau 1 · partout, aujourd'hui</span><h3>Code-barres + date lue sur l'emballage</h3><p class="note">L'EAN-13 identifie le produit, pas le paquet. La date vient de la photo, confirmée par le client.</p></div>
+      <div class="level"><span class="n">Niveau 2 · produits avec QR GS1</span><h3>Un scan, la date est dans le code</h3><p class="note">GTIN + lot + date limite (identifiant 17). Étiquettes boucherie/traiteur, puis Sunrise 2027.</p></div>
+      <div class="level"><span class="n">Niveau 3 · ce qu'on propose à l'enseigne</span><h3>Zéro scan : la caisse remplit le frigo</h3><p class="note">Carte de fidélité + ticket numérique avec la date de chaque produit frais.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== RÉGLAGES ===== -->
+  <section class="view" id="v-set" hidden aria-labelledby="h-set">
+    <div><div class="eyebrow">FrigoScan</div><h1 id="h-set">Réglages</h1></div>
+    <div class="panel stack">
+      <h2>Rappels</h2>
+      <label for="lead">Me rappeler<select id="lead"><option value="1">1 jour avant</option><option value="2">2 jours avant</option><option value="3">3 jours avant</option></select></label>
+      <label for="hour">À quelle heure<select id="hour"><option value="8">8 h</option><option value="12">12 h</option><option value="17">17 h</option><option value="19">19 h</option></select></label>
+      <p class="note">Le bouton « Rappels » du frigo crée les alarmes dans le calendrier du téléphone. Ajoutez-les après chaque course.</p>
+    </div>
+    <div class="panel stack">
+      <h2>Intelligence artificielle</h2>
+      <p class="note">Optionnel. Avec une clé API Claude, l'app lit la date sur la photo de l'emballage et propose des recettes. La clé reste sur ce téléphone ; chaque demande coûte quelques centimes sur votre compte Anthropic.</p>
+      <label for="apikey">Clé API Claude<input id="apikey" type="password" placeholder="sk-ant-…" autocomplete="off"></label>
+      <div class="row"><button id="btn-key">Enregistrer</button><button class="ghost" id="btn-key-del">Effacer la clé</button></div>
+      <p class="note" id="key-state"></p>
+    </div>
+    <div class="panel stack">
+      <h2>Données</h2>
+      <p class="note">Le frigo est enregistré sur ce téléphone uniquement. Chaque membre de la famille a son propre frigo.</p>
+      <button id="btn-clear">Vider le frigo</button>
+    </div>
+    <div class="panel stack">
+      <h2>Installer l'app</h2>
+      <p class="note"><b>iPhone :</b> ouvrir dans Safari, bouton Partager, « Sur l'écran d'accueil ».<br><b>Android :</b> ouvrir dans Chrome, menu ⋮, « Installer l'application ».</p>
+    </div>
+    <p class="note">Idée de Louis Goemaere. Prototype, version 1.</p>
+  </section>
+</main>
+
+<nav class="tabs" aria-label="Navigation">
+  <div class="in">
+    <button class="nav-btn" data-view="frigo" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2.5" width="14" height="19" rx="2.5"/><path d="M5 10h14M8.5 6v1.5M8.5 13v3"/></svg>Frigo<span class="badge" id="badge" hidden></span></button>
+    <button class="nav-btn" data-view="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M7 9v6M10 9v6M13 9v6M16.5 9v6"/></svg>Scanner</button>
+    <button class="nav-btn" data-view="demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h14v18l-2.3-1.5L14.3 21 12 19.5 9.7 21l-2.4-1.5L5 21z"/><path d="M8.5 8h7M8.5 11.5h7M8.5 15h4"/></svg>Démo</button>
+    <button class="nav-btn" data-view="set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages</button>
+  </div>
+</nav>
+
+<script src="vendor/zxing.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="vendor/jsbarcode.min.js"></script>
+<script src="gs1.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
